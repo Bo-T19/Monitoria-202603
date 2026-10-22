@@ -1,0 +1,444 @@
+<html>
+    <head>
+        <meta charset="utf-8">
+        
+            <script>function neighbourhoodHighlight(params) {
+  // console.log("in nieghbourhoodhighlight");
+  allNodes = nodes.get({ returnType: "Object" });
+  // originalNodes = JSON.parse(JSON.stringify(allNodes));
+  // if something is selected:
+  if (params.nodes.length > 0) {
+    highlightActive = true;
+    var i, j;
+    var selectedNode = params.nodes[0];
+    var degrees = 2;
+
+    // mark all nodes as hard to read.
+    for (let nodeId in allNodes) {
+      // nodeColors[nodeId] = allNodes[nodeId].color;
+      allNodes[nodeId].color = "rgba(200,200,200,0.5)";
+      if (allNodes[nodeId].hiddenLabel === undefined) {
+        allNodes[nodeId].hiddenLabel = allNodes[nodeId].label;
+        allNodes[nodeId].label = undefined;
+      }
+    }
+    var connectedNodes = network.getConnectedNodes(selectedNode);
+    var allConnectedNodes = [];
+
+    // get the second degree nodes
+    for (i = 1; i < degrees; i++) {
+      for (j = 0; j < connectedNodes.length; j++) {
+        allConnectedNodes = allConnectedNodes.concat(
+          network.getConnectedNodes(connectedNodes[j])
+        );
+      }
+    }
+
+    // all second degree nodes get a different color and their label back
+    for (i = 0; i < allConnectedNodes.length; i++) {
+      // allNodes[allConnectedNodes[i]].color = "pink";
+      allNodes[allConnectedNodes[i]].color = "rgba(150,150,150,0.75)";
+      if (allNodes[allConnectedNodes[i]].hiddenLabel !== undefined) {
+        allNodes[allConnectedNodes[i]].label =
+          allNodes[allConnectedNodes[i]].hiddenLabel;
+        allNodes[allConnectedNodes[i]].hiddenLabel = undefined;
+      }
+    }
+
+    // all first degree nodes get their own color and their label back
+    for (i = 0; i < connectedNodes.length; i++) {
+      // allNodes[connectedNodes[i]].color = undefined;
+      allNodes[connectedNodes[i]].color = nodeColors[connectedNodes[i]];
+      if (allNodes[connectedNodes[i]].hiddenLabel !== undefined) {
+        allNodes[connectedNodes[i]].label =
+          allNodes[connectedNodes[i]].hiddenLabel;
+        allNodes[connectedNodes[i]].hiddenLabel = undefined;
+      }
+    }
+
+    // the main node gets its own color and its label back.
+    // allNodes[selectedNode].color = undefined;
+    allNodes[selectedNode].color = nodeColors[selectedNode];
+    if (allNodes[selectedNode].hiddenLabel !== undefined) {
+      allNodes[selectedNode].label = allNodes[selectedNode].hiddenLabel;
+      allNodes[selectedNode].hiddenLabel = undefined;
+    }
+  } else if (highlightActive === true) {
+    // console.log("highlightActive was true");
+    // reset all nodes
+    for (let nodeId in allNodes) {
+      // allNodes[nodeId].color = "purple";
+      allNodes[nodeId].color = nodeColors[nodeId];
+      // delete allNodes[nodeId].color;
+      if (allNodes[nodeId].hiddenLabel !== undefined) {
+        allNodes[nodeId].label = allNodes[nodeId].hiddenLabel;
+        allNodes[nodeId].hiddenLabel = undefined;
+      }
+    }
+    highlightActive = false;
+  }
+
+  // transform the object into an array
+  var updateArray = [];
+  if (params.nodes.length > 0) {
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        // console.log(allNodes[nodeId]);
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  } else {
+    // console.log("Nothing was selected");
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        // console.log(allNodes[nodeId]);
+        // allNodes[nodeId].color = {};
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  }
+}
+
+function filterHighlight(params) {
+  allNodes = nodes.get({ returnType: "Object" });
+  // if something is selected:
+  if (params.nodes.length > 0) {
+    filterActive = true;
+    let selectedNodes = params.nodes;
+
+    // hiding all nodes and saving the label
+    for (let nodeId in allNodes) {
+      allNodes[nodeId].hidden = true;
+      if (allNodes[nodeId].savedLabel === undefined) {
+        allNodes[nodeId].savedLabel = allNodes[nodeId].label;
+        allNodes[nodeId].label = undefined;
+      }
+    }
+
+    for (let i=0; i < selectedNodes.length; i++) {
+      allNodes[selectedNodes[i]].hidden = false;
+      if (allNodes[selectedNodes[i]].savedLabel !== undefined) {
+        allNodes[selectedNodes[i]].label = allNodes[selectedNodes[i]].savedLabel;
+        allNodes[selectedNodes[i]].savedLabel = undefined;
+      }
+    }
+
+  } else if (filterActive === true) {
+    // reset all nodes
+    for (let nodeId in allNodes) {
+      allNodes[nodeId].hidden = false;
+      if (allNodes[nodeId].savedLabel !== undefined) {
+        allNodes[nodeId].label = allNodes[nodeId].savedLabel;
+        allNodes[nodeId].savedLabel = undefined;
+      }
+    }
+    filterActive = false;
+  }
+
+  // transform the object into an array
+  var updateArray = [];
+  if (params.nodes.length > 0) {
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  } else {
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  }
+}
+
+function selectNode(nodes) {
+  network.selectNodes(nodes);
+  neighbourhoodHighlight({ nodes: nodes });
+  return nodes;
+}
+
+function selectNodes(nodes) {
+  network.selectNodes(nodes);
+  filterHighlight({nodes: nodes});
+  return nodes;
+}
+
+function highlightFilter(filter) {
+  let selectedNodes = []
+  let selectedProp = filter['property']
+  if (filter['item'] === 'node') {
+    let allNodes = nodes.get({ returnType: "Object" });
+    for (let nodeId in allNodes) {
+      if (allNodes[nodeId][selectedProp] && filter['value'].includes((allNodes[nodeId][selectedProp]).toString())) {
+        selectedNodes.push(nodeId)
+      }
+    }
+  }
+  else if (filter['item'] === 'edge'){
+    let allEdges = edges.get({returnType: 'object'});
+    // check if the selected property exists for selected edge and select the nodes connected to the edge
+    for (let edge in allEdges) {
+      if (allEdges[edge][selectedProp] && filter['value'].includes((allEdges[edge][selectedProp]).toString())) {
+        selectedNodes.push(allEdges[edge]['from'])
+        selectedNodes.push(allEdges[edge]['to'])
+      }
+    }
+  }
+  selectNodes(selectedNodes)
+}</script>
+            <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/vis-network/9.1.2/dist/dist/vis-network.min.css" integrity="sha512-WgxfT5LWjfszlPHXRmBWHkV2eceiWTOBvrKCNbdgDYTHrT2AeLCGbF4sZlZw3UMN3WtL0tGUoIAKsu8mllg/XA==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+            <script src="https://cdnjs.cloudflare.com/ajax/libs/vis-network/9.1.2/dist/vis-network.min.js" integrity="sha512-LnvoEWDFrqGHlHmDD2101OrLcbsfkrzoSpvtSQtxK3RMnRV0eOkhhBN2dXHKRrUU8p2DGRTk35n4O8nWSVe1mQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+            
+            
+            
+            
+            
+            
+
+        
+<center>
+<h1></h1>
+</center>
+
+<!-- <link rel="stylesheet" href="../node_modules/vis/dist/vis.min.css" type="text/css" />
+<script type="text/javascript" src="../node_modules/vis/dist/vis.js"> </script>-->
+        <link
+          href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta3/dist/css/bootstrap.min.css"
+          rel="stylesheet"
+          integrity="sha384-eOJMYsd53ii+scO/bJGFsiCZc+5NDVN2yr8+0RDqr0Ql0h+rP48ckxlpbzKgwra6"
+          crossorigin="anonymous"
+        />
+        <script
+          src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta3/dist/js/bootstrap.bundle.min.js"
+          integrity="sha384-JEW9xMcG8R+pH31jmWH6WWP0WintQrMb4s7ZOdauHnUtxwoG2vI5DkLtS3qm9Ekf"
+          crossorigin="anonymous"
+        ></script>
+
+
+        <center>
+          <h1></h1>
+        </center>
+        <style type="text/css">
+
+             #mynetwork {
+                 width: 100%;
+                 height: 800px;
+                 background-color: #ffffff;
+                 border: 1px solid lightgray;
+                 position: relative;
+                 float: left;
+             }
+
+             
+             #loadingBar {
+                 position:absolute;
+                 top:0px;
+                 left:0px;
+                 width: 100%;
+                 height: 800px;
+                 background-color:rgba(200,200,200,0.8);
+                 -webkit-transition: all 0.5s ease;
+                 -moz-transition: all 0.5s ease;
+                 -ms-transition: all 0.5s ease;
+                 -o-transition: all 0.5s ease;
+                 transition: all 0.5s ease;
+                 opacity:1;
+             }
+
+             #bar {
+                 position:absolute;
+                 top:0px;
+                 left:0px;
+                 width:20px;
+                 height:20px;
+                 margin:auto auto auto auto;
+                 border-radius:11px;
+                 border:2px solid rgba(30,30,30,0.05);
+                 background: rgb(0, 173, 246); /* Old browsers */
+                 box-shadow: 2px 0px 4px rgba(0,0,0,0.4);
+             }
+
+             #border {
+                 position:absolute;
+                 top:10px;
+                 left:10px;
+                 width:500px;
+                 height:23px;
+                 margin:auto auto auto auto;
+                 box-shadow: 0px 0px 4px rgba(0,0,0,0.2);
+                 border-radius:10px;
+             }
+
+             #text {
+                 position:absolute;
+                 top:8px;
+                 left:530px;
+                 width:30px;
+                 height:50px;
+                 margin:auto auto auto auto;
+                 font-size:22px;
+                 color: #000000;
+             }
+
+             div.outerBorder {
+                 position:relative;
+                 top:400px;
+                 width:600px;
+                 height:44px;
+                 margin:auto auto auto auto;
+                 border:8px solid rgba(0,0,0,0.1);
+                 background: rgb(252,252,252); /* Old browsers */
+                 background: -moz-linear-gradient(top,  rgba(252,252,252,1) 0%, rgba(237,237,237,1) 100%); /* FF3.6+ */
+                 background: -webkit-gradient(linear, left top, left bottom, color-stop(0%,rgba(252,252,252,1)), color-stop(100%,rgba(237,237,237,1))); /* Chrome,Safari4+ */
+                 background: -webkit-linear-gradient(top,  rgba(252,252,252,1) 0%,rgba(237,237,237,1) 100%); /* Chrome10+,Safari5.1+ */
+                 background: -o-linear-gradient(top,  rgba(252,252,252,1) 0%,rgba(237,237,237,1) 100%); /* Opera 11.10+ */
+                 background: -ms-linear-gradient(top,  rgba(252,252,252,1) 0%,rgba(237,237,237,1) 100%); /* IE10+ */
+                 background: linear-gradient(to bottom,  rgba(252,252,252,1) 0%,rgba(237,237,237,1) 100%); /* W3C */
+                 filter: progid:DXImageTransform.Microsoft.gradient( startColorstr='#fcfcfc', endColorstr='#ededed',GradientType=0 ); /* IE6-9 */
+                 border-radius:72px;
+                 box-shadow: 0px 0px 10px rgba(0,0,0,0.2);
+             }
+             
+
+             
+
+             
+        </style>
+    </head>
+
+
+    <body>
+        <div class="card" style="width: 100%">
+            
+            
+            <div id="mynetwork" class="card-body"></div>
+        </div>
+
+        
+            <div id="loadingBar">
+              <div class="outerBorder">
+                <div id="text">0%</div>
+                <div id="border">
+                  <div id="bar"></div>
+                </div>
+              </div>
+            </div>
+        
+        
+
+        <script type="text/javascript">
+
+              // initialize global variables.
+              var edges;
+              var nodes;
+              var allNodes;
+              var allEdges;
+              var nodeColors;
+              var originalNodes;
+              var network;
+              var container;
+              var options, data;
+              var filter = {
+                  item : '',
+                  property : '',
+                  value : []
+              };
+
+              
+
+              
+
+              // This method is responsible for drawing the graph, returns the drawn network
+              function drawGraph() {
+                  var container = document.getElementById('mynetwork');
+
+                  
+
+                  // parsing and collecting nodes and edges from the python
+                  nodes = new vis.DataSet([{"group": 2, "id": "Albert", "label": "Albert", "shape": "dot", "size": 25, "title": "PERSONA \u00b7 comunidad 2\nEs un personaje que es disparado por Yu Tsun."}, {"group": 0, "id": "Yu Tsun", "label": "Yu Tsun", "shape": "dot", "size": 280, "title": "PERSONA \u00b7 comunidad 0\nEs el narrador y protagonista que reflexiona sobre su destino."}, {"group": 3, "id": "Richard Madden", "label": "Richard Madden", "shape": "dot", "size": 34, "title": "PERSONA \u00b7 comunidad 3\nEs un capit\u00e1n que aparece en el jard\u00edn y es descrito como fuerte como una estatua."}, {"group": 0, "id": "admiraci\u00f3n", "label": "admiraci\u00f3n", "shape": "dot", "size": 13, "title": "CONCEPTO \u00b7 comunidad 0\nLa admiraci\u00f3n que siente Yu Tsun por las historias de su antepasado."}, {"group": 4, "id": "Stephen Albert", "label": "Stephen Albert", "shape": "dot", "size": 31, "title": "PERSONA \u00b7 comunidad 4\nEs un sabio sin\u00f3logo que es asesinado por Yu Tsun."}, {"group": 4, "id": "Enciclopedia Perdida", "label": "Enciclopedia Perdida", "shape": "dot", "size": 16, "title": "OBRA \u00b7 comunidad 4\nUna obra que fue dirigida por el Tercer Emperador de la Dinast\u00eda Luminosa."}, {"group": 8, "id": "praderas", "label": "praderas", "shape": "dot", "size": 13, "title": "LUGAR \u00b7 comunidad 8\nUn paisaje confuso que rodea el camino."}, {"group": 8, "id": "camino", "label": "camino", "shape": "dot", "size": 13, "title": "LUGAR \u00b7 comunidad 8\nEl camino que baja y se bifurca entre las praderas."}, {"group": 4, "id": "discusi\u00f3n sobre la novela", "label": "discusi\u00f3n sobre la novela", "shape": "dot", "size": 13, "title": "EVENTO \u00b7 comunidad 4\nUn evento donde se analizan los temas de la obra de Ts\u0027ui P\u00ean."}, {"group": 0, "id": "Agentes del Imperio Alem\u00e1n", "label": "Agentes del Imperio Alem\u00e1n", "shape": "dot", "size": 13, "title": "PERSONA \u00b7 comunidad 0\nLos enemigos que Yu Tsun busca."}, {"group": 0, "id": "Francia", "label": "Francia", "shape": "dot", "size": 13, "title": "LUGAR \u00b7 comunidad 0\nEl pa\u00eds donde ocurre la guerra."}, {"group": 0, "id": "estaci\u00f3n lejana", "label": "estaci\u00f3n lejana", "shape": "dot", "size": 13, "title": "LUGAR \u00b7 comunidad 0\nLa estaci\u00f3n a la que se dirige Yu Tsun."}, {"group": 3, "id": "pabell\u00f3n", "label": "pabell\u00f3n", "shape": "dot", "size": 13, "title": "LUGAR \u00b7 comunidad 3\nUna estructura que se puede ver desde el port\u00f3n."}, {"group": 3, "id": "jard\u00edn", "label": "jard\u00edn", "shape": "dot", "size": 22, "title": "LUGAR \u00b7 comunidad 3\nEs un jard\u00edn h\u00famedo que rodea la casa de Yu Tsun."}, {"group": 12, "id": "reflexi\u00f3n", "label": "reflexi\u00f3n", "shape": "dot", "size": 16, "title": "EVENTO \u00b7 comunidad 12\nEl acto de pensar sobre las redacciones y su significado."}, {"group": 0, "id": "plan arriesgado", "label": "plan arriesgado", "shape": "dot", "size": 13, "title": "EVENTO \u00b7 comunidad 0\nUn plan que Yu Tsun lleva a cabo."}, {"group": 0, "id": "resignaci\u00f3n", "label": "resignaci\u00f3n", "shape": "dot", "size": 13, "title": "CONCEPTO \u00b7 comunidad 0\nLa resignaci\u00f3n que Yu Tsun anticipa en los hombres."}, {"group": 0, "id": "Alemania", "label": "Alemania", "shape": "dot", "size": 13, "title": "LUGAR \u00b7 comunidad 0\nUn pa\u00eds que Yu Tsun considera b\u00e1rbaro."}, {"group": 0, "id": "llavero", "label": "llavero", "shape": "dot", "size": 13, "title": "OBJETO \u00b7 comunidad 0\nUn objeto que contiene llaves del departamento de Runeberg."}, {"group": 9, "id": "tarde", "label": "tarde", "shape": "dot", "size": 13, "title": "LUGAR \u00b7 comunidad 9\nUna tarde \u00edntima e infinita que se describe en el fragmento."}, {"group": 9, "id": "infinito", "label": "infinito", "shape": "dot", "size": 16, "title": "CONCEPTO \u00b7 comunidad 9\nLa cualidad que Yu Tsun investiga en relaci\u00f3n al libro."}, {"group": 2, "id": "El jard\u00edn de los senderos que se bifurcan", "label": "El jard\u00edn de los senderos que se bifurcan", "shape": "dot", "size": 43, "title": "OBRA \u00b7 comunidad 2\n"}, {"group": 2, "id": "varios porvenires", "label": "varios porvenires", "shape": "dot", "size": 13, "title": "CONCEPTO \u00b7 comunidad 2\nSon las diversas alternativas que se presentan en la obra."}, {"group": 0, "id": "Desesperaci\u00f3n", "label": "Desesperaci\u00f3n", "shape": "dot", "size": 13, "title": "CONCEPTO \u00b7 comunidad 0\nSentimiento que experimenta Yu Tsun."}, {"group": 0, "id": "mundo de laberintos", "label": "mundo de laberintos", "shape": "dot", "size": 13, "title": "LUGAR \u00b7 comunidad 0\nEl mundo conceptual donde Yu Tsun reflexiona sobre su vida."}, {"group": 10, "id": "El Jardin de los senderos que se bifurcan", "label": "El Jardin de los senderos que se bifurcan", "shape": "dot", "size": 16, "title": "OBRA \u00b7 comunidad 10\nCuento escrito por Jorge Luis Borges."}, {"group": 10, "id": "laberintos", "label": "laberintos", "shape": "dot", "size": 16, "title": "CONCEPTO \u00b7 comunidad 10\nConcepto que simboliza la complejidad en la narrativa."}, {"group": 0, "id": "Estado de tensi\u00f3n", "label": "Estado de tensi\u00f3n", "shape": "dot", "size": 13, "title": "LUGAR \u00b7 comunidad 0\nEstado emocional de Yu Tsun."}, {"group": 1, "id": "Ts\u0027ui P\u00ean", "label": "Ts\u0027ui P\u00ean", "shape": "dot", "size": 52, "title": "PERSONA \u00b7 comunidad 1\n"}, {"group": 1, "id": "Laberinto", "label": "Laberinto", "shape": "dot", "size": 13, "title": "OBJETO \u00b7 comunidad 1\nUn laberinto que es parte de la obra de Ts\u0027ui P\u00ean."}, {"group": 0, "id": "Arresto o asesinato de Runeberg", "label": "Arresto o asesinato de Runeberg", "shape": "dot", "size": 13, "title": "EVENTO \u00b7 comunidad 0\nRuneberg ha sido arrestado o asesinado."}, {"group": 0, "id": "Aniquilaci\u00f3n", "label": "Aniquilaci\u00f3n", "shape": "dot", "size": 13, "title": "EVENTO \u00b7 comunidad 0\nEl acto de destruir el parque de artiller\u00eda con bombas."}, {"group": 21, "id": "libro de Ts\u0027ui P\u00ean", "label": "libro de Ts\u0027ui P\u00ean", "shape": "dot", "size": 16, "title": "OBRA \u00b7 comunidad 21\nEl libro que Ts\u0027ui P\u00ean escribi\u00f3, lleno de borradores contradictorios."}, {"group": 0, "id": "Cuarto de Yu Tsun", "label": "Cuarto de Yu Tsun", "shape": "dot", "size": 13, "title": "LUGAR \u00b7 comunidad 0\nLugar donde Yu Tsun se encierra."}, {"group": 0, "id": "lugar de reflexi\u00f3n", "label": "lugar de reflexi\u00f3n", "shape": "dot", "size": 13, "title": "LUGAR \u00b7 comunidad 0\nEl lugar donde Yu Tsun se sienta a reflexionar."}, {"group": 11, "id": "el campo", "label": "el campo", "shape": "dot", "size": 13, "title": "LUGAR \u00b7 comunidad 11\nEl campo donde se encuentra el camino que Yu Tsun toma."}, {"group": 11, "id": "el tren", "label": "el tren", "shape": "dot", "size": 13, "title": "LUGAR \u00b7 comunidad 11\nEl medio de transporte que utiliza Yu Tsun."}, {"group": 0, "id": "Cielo franc\u00e9s", "label": "Cielo franc\u00e9s", "shape": "dot", "size": 13, "title": "LUGAR \u00b7 comunidad 0\nEl lugar donde se desarrolla la acci\u00f3n b\u00e9lica."}, {"group": 0, "id": "desesperado prop\u00f3sito", "label": "desesperado prop\u00f3sito", "shape": "dot", "size": 13, "title": "CONCEPTO \u00b7 comunidad 0\nEl objetivo que Yu Tsun tiene en mente."}, {"group": 0, "id": "Jefe", "label": "Jefe", "shape": "dot", "size": 13, "title": "PERSONA \u00b7 comunidad 0\nUn hombre enfermo y odioso que no conoce a Yu Tsun."}, {"group": 5, "id": "el jard\u00edn", "label": "el jard\u00edn", "shape": "dot", "size": 19, "title": "LUGAR \u00b7 comunidad 5\n"}, {"group": 5, "id": "la casa", "label": "la casa", "shape": "dot", "size": 16, "title": "LUGAR \u00b7 comunidad 5\n"}, {"group": 0, "id": "historia familiar", "label": "historia familiar", "shape": "dot", "size": 13, "title": "CONCEPTO \u00b7 comunidad 0\nLa historia que conecta a Yu Tsun con su antepasado Ts\u0027ui P\u00ean."}, {"group": 0, "id": "capit\u00e1n", "label": "capit\u00e1n", "shape": "dot", "size": 13, "title": "PERSONA \u00b7 comunidad 0\nUn personaje que representa una amenaza para Yu Tsun."}, {"group": 0, "id": "cadena de n\u00edquel", "label": "cadena de n\u00edquel", "shape": "dot", "size": 13, "title": "OBJETO \u00b7 comunidad 0\nUn objeto que Yu Tsun encuentra en sus bolsillos."}, {"group": 0, "id": "entrada central", "label": "entrada central", "shape": "dot", "size": 13, "title": "LUGAR \u00b7 comunidad 0\nEl lugar donde Yu Tsun se detiene antes de abordar el tren."}, {"group": 0, "id": "Guerra", "label": "Guerra", "shape": "dot", "size": 13, "title": "EVENTO \u00b7 comunidad 0\nEl contexto b\u00e9lico en el que se encuentra Yu Tsun."}, {"group": 0, "id": "interacci\u00f3n en el and\u00e9n", "label": "interacci\u00f3n en el and\u00e9n", "shape": "dot", "size": 13, "title": "EVENTO \u00b7 comunidad 0\nInteracci\u00f3n entre Yu Tsun y los chicos en el and\u00e9n."}, {"group": 0, "id": "misterio", "label": "misterio", "shape": "dot", "size": 13, "title": "CONCEPTO \u00b7 comunidad 0\nUn laberinto de s\u00edmbolos y tiempo."}, {"group": 4, "id": "sinolog\u00eda", "label": "sinolog\u00eda", "shape": "dot", "size": 13, "title": "ORGANIZACION \u00b7 comunidad 4\nEl estudio de la cultura china, en el que Stephen Albert se especializa."}, {"group": 0, "id": "mundo de incertidumbre", "label": "mundo de incertidumbre", "shape": "dot", "size": 13, "title": "LUGAR \u00b7 comunidad 0\nEl contexto en el que se desarrolla la historia."}, {"group": 3, "id": "Imperio Brit\u00e1nico", "label": "Imperio Brit\u00e1nico", "shape": "dot", "size": 16, "title": "LUGAR \u00b7 comunidad 3\nEl imperio para el cual Yu Tsun trabaja."}, {"group": 4, "id": "omisi\u00f3n del tiempo", "label": "omisi\u00f3n del tiempo", "shape": "dot", "size": 13, "title": "CONCEPTO \u00b7 comunidad 4\nUn aspecto notable en la obra de Ts\u0027ui P\u00ean que Stephen Albert discute."}, {"group": 2, "id": "bifurcaciones", "label": "bifurcaciones", "shape": "dot", "size": 13, "title": "CONCEPTO \u00b7 comunidad 2\nSon las diversas rutas que se presentan en la narrativa."}, {"group": 0, "id": "determinaci\u00f3n irrevocable", "label": "determinaci\u00f3n irrevocable", "shape": "dot", "size": 13, "title": "CONCEPTO \u00b7 comunidad 0\nLa decisi\u00f3n firme de Yu Tsun sobre su destino."}, {"group": 12, "id": "herencia", "label": "herencia", "shape": "dot", "size": 13, "title": "CONCEPTO \u00b7 comunidad 12\nLa herencia de Yu Tsun a trav\u00e9s de su antepasado."}, {"group": 1, "id": "aficiones metaf\u00edsicas", "label": "aficiones metaf\u00edsicas", "shape": "dot", "size": 13, "title": "CONCEPTO \u00b7 comunidad 1\nIntereses de Ts\u0027ui P\u00ean que influyen en su escritura."}, {"group": 13, "id": "troncos", "label": "troncos", "shape": "dot", "size": 13, "title": "OBJETO \u00b7 comunidad 13\nLos troncos que rayaban y anulaban la luz del farol."}, {"group": 13, "id": "farol", "label": "farol", "shape": "dot", "size": 13, "title": "OBJETO \u00b7 comunidad 13\nEl farol que se acerca y es afectado por los troncos."}, {"group": 0, "id": "Reflexi\u00f3n", "label": "Reflexi\u00f3n", "shape": "dot", "size": 13, "title": "CONCEPTO \u00b7 comunidad 0\nEl proceso mental de Yu Tsun sobre su situaci\u00f3n actual."}, {"group": 0, "id": "Goethe", "label": "Goethe", "shape": "dot", "size": 13, "title": "PERSONA \u00b7 comunidad 0\nUn hombre que Yu Tsun considera importante."}, {"group": 14, "id": "monje tao\u00edsta o budista", "label": "monje tao\u00edsta o budista", "shape": "dot", "size": 13, "title": "PERSONA \u00b7 comunidad 14\nAlbacea de Ts\u0027ui P\u00ean que insisti\u00f3 en la publicaci\u00f3n de los manuscritos."}, {"group": 14, "id": "publicaci\u00f3n de manuscritos", "label": "publicaci\u00f3n de manuscritos", "shape": "dot", "size": 13, "title": "OBRA \u00b7 comunidad 14\nLos manuscritos de Ts\u0027ui P\u00ean que fueron publicados."}, {"group": 2, "id": "bifurcaci\u00f3n", "label": "bifurcaci\u00f3n", "shape": "dot", "size": 13, "title": "CONCEPTO \u00b7 comunidad 2\nLa idea de que las decisiones llevan a diferentes futuros."}, {"group": 6, "id": "m\u00fasica", "label": "m\u00fasica", "shape": "dot", "size": 16, "title": "OBJETO \u00b7 comunidad 6\nLa m\u00fasica que se escucha en el ambiente."}, {"group": 6, "id": "viento", "label": "viento", "shape": "dot", "size": 13, "title": "CONCEPTO \u00b7 comunidad 6\nEl aire en movimiento que afecta el sonido de la m\u00fasica."}, {"group": 0, "id": "estaci\u00f3n", "label": "estaci\u00f3n", "shape": "dot", "size": 13, "title": "LUGAR \u00b7 comunidad 0\nEl lugar donde Yu Tsun toma el tren."}, {"group": 0, "id": "Tientsin", "label": "Tientsin", "shape": "dot", "size": 13, "title": "LUGAR \u00b7 comunidad 0\nUn lugar donde Stephen Albert fue misionero."}, {"group": 3, "id": "enfrentamiento", "label": "enfrentamiento", "shape": "dot", "size": 13, "title": "EVENTO \u00b7 comunidad 3\nEl evento donde Richard Madden se defiende."}, {"group": 1, "id": "infinitas series de tiempos", "label": "infinitas series de tiempos", "shape": "dot", "size": 13, "title": "CONCEPTO \u00b7 comunidad 1\nLa creencia de Ts\u0027ui P\u00ean en m\u00faltiples realidades temporales."}, {"group": 0, "id": "parque de artiller\u00eda brit\u00e1nico sobre el Ancre", "label": "parque de artiller\u00eda brit\u00e1nico sobre el Ancre", "shape": "dot", "size": 13, "title": "LUGAR \u00b7 comunidad 0\nEl lugar que Yu Tsun quiere nombrar."}, {"group": 0, "id": "contexto literario", "label": "contexto literario", "shape": "dot", "size": 13, "title": "LUGAR \u00b7 comunidad 0\nEl entorno donde se desarrolla la discusi\u00f3n sobre la obra de Ts\u0027ui P\u00ean."}, {"group": 0, "id": "Hochschule de Tsingtao", "label": "Hochschule de Tsingtao", "shape": "dot", "size": 13, "title": "LUGAR \u00b7 comunidad 0\nInstituci\u00f3n donde Yu Tsun fue catedr\u00e1tico."}, {"group": 3, "id": "Pabell\u00f3n de la L\u00edmpida Soledad", "label": "Pabell\u00f3n de la L\u00edmpida Soledad", "shape": "dot", "size": 16, "title": "LUGAR \u00b7 comunidad 3\nEstructura que se ergu\u00eda en el centro del jard\u00edn."}, {"group": 15, "id": "batalla", "label": "batalla", "shape": "dot", "size": 13, "title": "EVENTO \u00b7 comunidad 15\nUn conflicto en el que un ej\u00e9rcito marcha hacia la victoria."}, {"group": 15, "id": "vida y muerte", "label": "vida y muerte", "shape": "dot", "size": 13, "title": "CONCEPTO \u00b7 comunidad 15\nConceptos que se ven menospreciados en la batalla."}, {"group": 1, "id": "Hung Lu Meng", "label": "Hung Lu Meng", "shape": "dot", "size": 13, "title": "OBRA \u00b7 comunidad 1\nUna novela famosa que Ts\u0027ui P\u00ean quer\u00eda superar en popularidad."}, {"group": 0, "id": "mundo", "label": "mundo", "shape": "dot", "size": 13, "title": "LUGAR \u00b7 comunidad 0\nEl entorno en el que Yu Tsun reflexiona sobre su destino."}, {"group": 0, "id": "la casa del doctor Stephen Albert", "label": "la casa del doctor Stephen Albert", "shape": "dot", "size": 13, "title": "LUGAR \u00b7 comunidad 0\nLa casa a la que se dirige Yu Tsun."}, {"group": 0, "id": "Inglaterra", "label": "Inglaterra", "shape": "dot", "size": 13, "title": "LUGAR \u00b7 comunidad 0\nEs el pa\u00eds que est\u00e1 en guerra y donde ocurre la historia."}, {"group": 4, "id": "enigma", "label": "enigma", "shape": "dot", "size": 13, "title": "CONCEPTO \u00b7 comunidad 4\nLa obra de Ts\u0027ui P\u00ean es un enigma que invita a la reflexi\u00f3n."}, {"group": 1, "id": "libro", "label": "libro", "shape": "dot", "size": 16, "title": "OBRA \u00b7 comunidad 1\nUna de las dos obras que Ts\u0027ui P\u00ean se propuso crear."}, {"group": 1, "id": "laberinto", "label": "laberinto", "shape": "dot", "size": 22, "title": "CONCEPTO \u00b7 comunidad 1\nEs la representaci\u00f3n de las m\u00faltiples decisiones y desenlaces."}, {"group": 3, "id": "Hans Rabener", "label": "Hans Rabener", "shape": "dot", "size": 16, "title": "PERSONA \u00b7 comunidad 3\nEsp\u00eda prusiano que ataca a Richard Madden."}, {"group": 0, "id": "moneda cuadrangular", "label": "moneda cuadrangular", "shape": "dot", "size": 13, "title": "OBJETO \u00b7 comunidad 0\nUn objeto que Yu Tsun encuentra en sus bolsillos."}, {"group": 0, "id": "Hsi P\u0027\u00eang", "label": "Hsi P\u0027\u00eang", "shape": "dot", "size": 13, "title": "PERSONA \u00b7 comunidad 0\nUn personaje que intenta corregir la soledad de Yu Tsun."}, {"group": 0, "id": "cansancio", "label": "cansancio", "shape": "dot", "size": 13, "title": "CONCEPTO \u00b7 comunidad 0\nEs el estado emocional de Yu Tsun tras sus acciones."}, {"group": 22, "id": "redacciones", "label": "redacciones", "shape": "dot", "size": 16, "title": "OBRA \u00b7 comunidad 22\nDos redacciones de un mismo cap\u00edtulo \u00e9pico que describen batallas."}, {"group": 0, "id": "juego del azar", "label": "juego del azar", "shape": "dot", "size": 13, "title": "EVENTO \u00b7 comunidad 0\nEl juego que le permite a Yu Tsun evadir a su adversario."}, {"group": 0, "id": "Secreto", "label": "Secreto", "shape": "dot", "size": 13, "title": "CONCEPTO \u00b7 comunidad 0\nEl nombre del preciso lugar del nuevo parque de artiller\u00eda brit\u00e1nico."}, {"group": 4, "id": "Tercer Emperador de la Dinast\u00eda Luminosa", "label": "Tercer Emperador de la Dinast\u00eda Luminosa", "shape": "dot", "size": 13, "title": "PERSONA \u00b7 comunidad 4\nEl emperador que dirigi\u00f3 la Enciclopedia Perdida."}, {"group": 1, "id": "problema del tiempo", "label": "problema del tiempo", "shape": "dot", "size": 13, "title": "CONCEPTO \u00b7 comunidad 1\nUn tema que inquiet\u00f3 a Ts\u0027ui P\u00ean y que no aparece en su novela."}, {"group": 1, "id": "creaci\u00f3n del laberinto", "label": "creaci\u00f3n del laberinto", "shape": "dot", "size": 13, "title": "EVENTO \u00b7 comunidad 1\nEl proceso de edificaci\u00f3n del laberinto por Ts\u0027ui P\u00ean."}, {"group": 0, "id": "condena a la horca", "label": "condena a la horca", "shape": "dot", "size": 13, "title": "EVENTO \u00b7 comunidad 0\nEs el castigo que enfrenta Yu Tsun tras sus acciones."}, {"group": 0, "id": "Fenton", "label": "Fenton", "shape": "dot", "size": 13, "title": "LUGAR \u00b7 comunidad 0\nUn suburbio donde vive la \u00fanica persona capaz de transmitir la noticia."}, {"group": 0, "id": "aventura", "label": "aventura", "shape": "dot", "size": 13, "title": "EVENTO \u00b7 comunidad 0\nLa aventura que Yu Tsun se siente capaz de llevar a cabo."}, {"group": 0, "id": "su mente", "label": "su mente", "shape": "dot", "size": 13, "title": "LUGAR \u00b7 comunidad 0\nEl lugar donde Yu Tsun reflexiona sobre su historia."}, {"group": 2, "id": "contradicciones", "label": "contradicciones", "shape": "dot", "size": 13, "title": "CONCEPTO \u00b7 comunidad 2\nSon los resultados de las decisiones tomadas en la narrativa."}, {"group": 0, "id": "duelo", "label": "duelo", "shape": "dot", "size": 13, "title": "EVENTO \u00b7 comunidad 0\nUn enfrentamiento entre Yu Tsun y su adversario."}, {"group": 16, "id": "Ashgrove", "label": "Ashgrove", "shape": "dot", "size": 13, "title": "LUGAR \u00b7 comunidad 16\nEstaci\u00f3n donde Yu Tsun se detiene durante su viaje."}, {"group": 16, "id": "el and\u00e9n", "label": "el and\u00e9n", "shape": "dot", "size": 13, "title": "LUGAR \u00b7 comunidad 16\nLugar donde Yu Tsun interact\u00faa con los ni\u00f1os."}, {"group": 0, "id": "Cuarto", "label": "Cuarto", "shape": "dot", "size": 13, "title": "LUGAR \u00b7 comunidad 0\nEl lugar donde Yu Tsun se encuentra reflexionando."}, {"group": 0, "id": "Aldea de Ashgove", "label": "Aldea de Ashgove", "shape": "dot", "size": 13, "title": "LUGAR \u00b7 comunidad 0\nEl destino al que Yu Tsun se dirige."}, {"group": 0, "id": "Jard\u00edn de Hai Feng", "label": "Jard\u00edn de Hai Feng", "shape": "dot", "size": 13, "title": "LUGAR \u00b7 comunidad 0\nEl lugar donde Yu Tsun fue un ni\u00f1o."}, {"group": 0, "id": "Informaci\u00f3n", "label": "Informaci\u00f3n", "shape": "dot", "size": 13, "title": "OBJETO \u00b7 comunidad 0\nEl conocimiento que Yu Tsun tiene sobre el parque de artiller\u00eda brit\u00e1nico."}, {"group": 1, "id": "jard\u00edn de senderos que se bifurcan", "label": "jard\u00edn de senderos que se bifurcan", "shape": "dot", "size": 13, "title": "OBRA \u00b7 comunidad 1\nLa obra que Ts\u0027ui P\u00ean dej\u00f3 como legado."}, {"group": 17, "id": "laberinto perdido", "label": "laberinto perdido", "shape": "dot", "size": 13, "title": "OBJETO \u00b7 comunidad 17\nEl laberinto que Ts\u0027ui P\u00ean construy\u00f3 y que nunca fue encontrado."}, {"group": 17, "id": "conocimiento", "label": "conocimiento", "shape": "dot", "size": 13, "title": "CONCEPTO \u00b7 comunidad 17\nLa b\u00fasqueda de entendimiento y significado en la vida."}, {"group": 0, "id": "di\u00e1logo sobre el tiempo", "label": "di\u00e1logo sobre el tiempo", "shape": "dot", "size": 13, "title": "EVENTO \u00b7 comunidad 0\nUn intercambio de ideas sobre la naturaleza del tiempo."}, {"group": 5, "id": "tiempos divergentes", "label": "tiempos divergentes", "shape": "dot", "size": 13, "title": "CONCEPTO \u00b7 comunidad 5\nLos tiempos que se bifurcan y crean m\u00faltiples realidades."}, {"group": 0, "id": "rev\u00f3lver", "label": "rev\u00f3lver", "shape": "dot", "size": 13, "title": "OBJETO \u00b7 comunidad 0\nUn arma que Yu Tsun empu\u00f1a para darse valor."}, {"group": 7, "id": "alameda", "label": "alameda", "shape": "dot", "size": 13, "title": "LUGAR \u00b7 comunidad 7\nUn espacio verde que se puede ver entre las rejas."}, {"group": 7, "id": "port\u00f3n", "label": "port\u00f3n", "shape": "dot", "size": 16, "title": "LUGAR \u00b7 comunidad 7\nEl port\u00f3n donde el hombre alto se presenta."}, {"group": 0, "id": "ciudad", "label": "ciudad", "shape": "dot", "size": 13, "title": "LUGAR \u00b7 comunidad 0\nEs la ciudad que Yu Tsun debe indicar a trav\u00e9s de su acci\u00f3n."}, {"group": 18, "id": "Historia de la Guerra Europea", "label": "Historia de la Guerra Europea", "shape": "dot", "size": 16, "title": "OBRA \u00b7 comunidad 18\nObra de Lidell Hart que menciona una ofensiva brit\u00e1nica."}, {"group": 18, "id": "Ofensiva brit\u00e1nica", "label": "Ofensiva brit\u00e1nica", "shape": "dot", "size": 13, "title": "EVENTO \u00b7 comunidad 18\nOfensiva planeada para el 24 de julio de 1916."}, {"group": 2, "id": "espacio", "label": "espacio", "shape": "dot", "size": 13, "title": "CONCEPTO \u00b7 comunidad 2\nEl tema central de la adivinanza en la novela."}, {"group": 1, "id": "existencia", "label": "existencia", "shape": "dot", "size": 13, "title": "CONCEPTO \u00b7 comunidad 1\nLa condici\u00f3n de estar vivo y consciente en el mundo."}, {"group": 19, "id": "Fang", "label": "Fang", "shape": "dot", "size": 13, "title": "PERSONA \u00b7 comunidad 19\nEs un personaje que tiene un secreto."}, {"group": 19, "id": "intruso", "label": "intruso", "shape": "dot", "size": 13, "title": "PERSONA \u00b7 comunidad 19\nEs el desconocido que Fang considera matar."}, {"group": 0, "id": "isla occidental", "label": "isla occidental", "shape": "dot", "size": 13, "title": "LUGAR \u00b7 comunidad 0\nEl lugar donde Yu Tsun se encuentra durante su aventura."}, {"group": 0, "id": "gobierno", "label": "gobierno", "shape": "dot", "size": 13, "title": "ORGANIZACION \u00b7 comunidad 0\nEl gobierno que representa la autoridad en el contexto de Yu Tsun."}, {"group": 2, "id": "centenares de manuscritos", "label": "centenares de manuscritos", "shape": "dot", "size": 13, "title": "OBJETO \u00b7 comunidad 2\nSon los textos que ha analizado Albert."}, {"group": 0, "id": "Muerte", "label": "Muerte", "shape": "dot", "size": 13, "title": "LUGAR \u00b7 comunidad 0\nEl destino que Yu Tsun teme enfrentar."}, {"group": 0, "id": "realidad", "label": "realidad", "shape": "dot", "size": 13, "title": "CONCEPTO \u00b7 comunidad 0\nLa percepci\u00f3n de Yu Tsun sobre la complejidad de la realidad."}, {"group": 2, "id": "bifurcaciones del tiempo", "label": "bifurcaciones del tiempo", "shape": "dot", "size": 13, "title": "CONCEPTO \u00b7 comunidad 2\nEl concepto de decisiones y caminos que se separan."}, {"group": 2, "id": "met\u00e1foras ineptas", "label": "met\u00e1foras ineptas", "shape": "dot", "size": 13, "title": "CONCEPTO \u00b7 comunidad 2\nUn recurso literario utilizado en la obra para evadir el tema del tiempo."}, {"group": 0, "id": "casa", "label": "casa", "shape": "dot", "size": 13, "title": "LUGAR \u00b7 comunidad 0\nEl hogar de Yu Tsun, cerca de la estaci\u00f3n."}, {"group": 20, "id": "Las 1001 Noches", "label": "Las 1001 Noches", "shape": "dot", "size": 13, "title": "OBRA \u00b7 comunidad 20\nUna colecci\u00f3n de cuentos que incluye la historia de la reina Shahrazad."}, {"group": 20, "id": "Shahrazad", "label": "Shahrazad", "shape": "dot", "size": 13, "title": "PERSONA \u00b7 comunidad 20\nLa reina que narra historias para posponer su ejecuci\u00f3n."}, {"group": 7, "id": "hombre alto", "label": "hombre alto", "shape": "dot", "size": 13, "title": "PERSONA \u00b7 comunidad 7\nUn hombre que lleva el farol y se acerca al port\u00f3n."}, {"group": 2, "id": "errores", "label": "errores", "shape": "dot", "size": 13, "title": "CONCEPTO \u00b7 comunidad 2\nSon las inexactitudes introducidas en los manuscritos."}, {"group": 0, "id": "ilusorias im\u00e1genes", "label": "ilusorias im\u00e1genes", "shape": "dot", "size": 13, "title": "CONCEPTO \u00b7 comunidad 0\nIm\u00e1genes que Yu Tsun imagina sobre el laberinto."}, {"group": 0, "id": "contrici\u00f3n", "label": "contrici\u00f3n", "shape": "dot", "size": 13, "title": "CONCEPTO \u00b7 comunidad 0\nEs el sentimiento de culpa que siente Yu Tsun."}, {"group": 1, "id": "familia de Ts\u0027ui P\u00ean", "label": "familia de Ts\u0027ui P\u00ean", "shape": "dot", "size": 13, "title": "PERSONA \u00b7 comunidad 1\nLos herederos que quer\u00edan destruir los manuscritos."}, {"group": 1, "id": "manuscritos ca\u00f3ticos", "label": "manuscritos ca\u00f3ticos", "shape": "dot", "size": 16, "title": "OBJETO \u00b7 comunidad 1\nLos escritos que la familia de Ts\u0027ui P\u00ean quer\u00eda destruir."}, {"group": 0, "id": "felicidad", "label": "felicidad", "shape": "dot", "size": 13, "title": "CONCEPTO \u00b7 comunidad 0\nEl estado emocional que experimenta Yu Tsun tras burlar a su adversario."}, {"group": 21, "id": "caos", "label": "caos", "shape": "dot", "size": 13, "title": "CONCEPTO \u00b7 comunidad 21\nEl estado de desorden presente en el libro de Ts\u0027ui P\u00ean."}, {"group": 0, "id": "conjeturas", "label": "conjeturas", "shape": "dot", "size": 13, "title": "CONCEPTO \u00b7 comunidad 0\nLas ideas que Yu Tsun imagina sobre la naturaleza de los libros."}, {"group": 0, "id": "libreta", "label": "libreta", "shape": "dot", "size": 13, "title": "OBJETO \u00b7 comunidad 0\nUn objeto que Yu Tsun encuentra en sus bolsillos."}, {"group": 0, "id": "Berl\u00edn", "label": "Berl\u00edn", "shape": "dot", "size": 13, "title": "LUGAR \u00b7 comunidad 0\nLa ciudad donde se espera noticias de Yu Tsun."}, {"group": 0, "id": "carta", "label": "carta", "shape": "dot", "size": 13, "title": "OBJETO \u00b7 comunidad 0\nUn objeto que Yu Tsun decide destruir inmediatamente."}, {"group": 0, "id": "estrategia", "label": "estrategia", "shape": "dot", "size": 13, "title": "CONCEPTO \u00b7 comunidad 0\nLa estrategia que Yu Tsun elabora para enfrentar su adversario."}, {"group": 22, "id": "sacrificio", "label": "sacrificio", "shape": "dot", "size": 13, "title": "CONCEPTO \u00b7 comunidad 22\nEl sacrificio de los h\u00e9roes en la batalla."}, {"group": 0, "id": "guerra", "label": "guerra", "shape": "dot", "size": 13, "title": "EVENTO \u00b7 comunidad 0\nEl conflicto en el que Yu Tsun est\u00e1 involucrado."}, {"group": 0, "id": "Staffordshire", "label": "Staffordshire", "shape": "dot", "size": 13, "title": "LUGAR \u00b7 comunidad 0\nUn lugar en Inglaterra donde se encuentra Yu Tsun."}, {"group": 3, "id": "Viktor Runeberg", "label": "Viktor Runeberg", "shape": "dot", "size": 13, "title": "PERSONA \u00b7 comunidad 3\nPersona mencionada en la declaraci\u00f3n de Yu Tsun."}, {"group": 0, "id": "Ej\u00e9rcito brit\u00e1nico", "label": "Ej\u00e9rcito brit\u00e1nico", "shape": "dot", "size": 13, "title": "ORGANIZACION \u00b7 comunidad 0\nLa organizaci\u00f3n para la que trabaja Yu Tsun."}, {"group": 0, "id": "reloj norteamericano", "label": "reloj norteamericano", "shape": "dot", "size": 13, "title": "OBJETO \u00b7 comunidad 0\nUn objeto que Yu Tsun encuentra en sus bolsillos."}, {"group": 6, "id": "cultura china", "label": "cultura china", "shape": "dot", "size": 13, "title": "CONCEPTO \u00b7 comunidad 6\nLa cultura de la m\u00fasica que se escucha."}, {"group": 0, "id": "estaci\u00f3n m\u00e1s lejana", "label": "estaci\u00f3n m\u00e1s lejana", "shape": "dot", "size": 13, "title": "LUGAR \u00b7 comunidad 0\nEl lugar al que Yu Tsun decide ir en lugar de Ashgove."}]);
+                  edges = new vis.DataSet([{"arrows": "to", "from": "Albert", "label": "RELACIONADO_CON / ASESINA_A", "title": "Albert es mencionado como un ser en otras dimensiones de tiempo. / Yu Tsun asesina a Albert.", "to": "Yu Tsun"}, {"arrows": "to", "from": "Albert", "label": "REVELA", "title": "Revela que la obra es una adivinanza sobre el espacio.", "to": "El jard\u00edn de los senderos que se bifurcan"}, {"arrows": "to", "from": "Albert", "label": "REVELA", "title": "Revela que ha confrontado centenares de manuscritos.", "to": "centenares de manuscritos"}, {"arrows": "to", "from": "Albert", "label": "REVELA", "title": "Revela que ha corregido errores de los copistas.", "to": "errores"}, {"arrows": "to", "from": "Yu Tsun", "label": "REVELA", "title": "Yu Tsun revela su admiraci\u00f3n por las redacciones.", "to": "admiraci\u00f3n"}, {"arrows": "to", "from": "Yu Tsun", "label": "ENEMIGO_DE / PERSIGUE_A", "title": "Yu Tsun es enemigo de los agentes del Imperio Alem\u00e1n. / Yu Tsun persigue a dos agentes del Imperio Alem\u00e1n.", "to": "Agentes del Imperio Alem\u00e1n"}, {"arrows": "to", "from": "Yu Tsun", "label": "VIVE_EN", "title": "Yu Tsun vive en un contexto de guerra.", "to": "Francia"}, {"arrows": "to", "from": "Yu Tsun", "label": "VIAJA_A", "title": "Yu Tsun viaja a una estaci\u00f3n m\u00e1s lejana.", "to": "estaci\u00f3n lejana"}, {"arrows": "to", "from": "Yu Tsun", "label": "PARTICIPA_EN", "title": "Yu Tsun participa en la reflexi\u00f3n sobre las redacciones.", "to": "reflexi\u00f3n"}, {"arrows": "to", "from": "Yu Tsun", "label": "PARTICIPA_EN", "title": "Yu Tsun participa en un plan arriesgado.", "to": "plan arriesgado"}, {"arrows": "to", "from": "Yu Tsun", "label": "REVELA", "title": "Yu Tsun revela su percepci\u00f3n sobre la naturaleza humana.", "to": "resignaci\u00f3n"}, {"arrows": "to", "from": "Yu Tsun", "label": "REVELA / VIAJA_A", "title": "Yu Tsun revela su desprecio por Alemania. / Yu Tsun desea viajar a Alemania con su mensaje.", "to": "Alemania"}, {"arrows": "to", "from": "Yu Tsun", "label": "POSEE", "title": "Yu Tsun posee un llavero con llaves.", "to": "llavero"}, {"arrows": "to", "from": "Yu Tsun", "label": "REVELA", "title": "Yu Tsun revela su estado de desesperaci\u00f3n.", "to": "Desesperaci\u00f3n"}, {"arrows": "to", "from": "Yu Tsun", "label": "VIVE_EN", "title": "Yu Tsun vive en un mundo de laberintos y reflexiones.", "to": "mundo de laberintos"}, {"arrows": "to", "from": "Yu Tsun", "label": "VIVE_EN", "title": "Yu Tsun vive en un estado de tensi\u00f3n.", "to": "Estado de tensi\u00f3n"}, {"arrows": "to", "from": "Yu Tsun", "label": "PARTICIPA_EN", "title": "Yu Tsun participa en una situaci\u00f3n peligrosa.", "to": "Arresto o asesinato de Runeberg"}, {"arrows": "to", "from": "Yu Tsun", "label": "PARTICIPA_EN", "title": "Yu Tsun participa en la aniquilaci\u00f3n del parque de artiller\u00eda.", "to": "Aniquilaci\u00f3n"}, {"arrows": "to", "from": "Yu Tsun", "label": "ESTUDIA", "title": "Yu Tsun examina el libro de Ts\u0027ui P\u00ean.", "to": "libro de Ts\u0027ui P\u00ean"}, {"arrows": "to", "from": "Yu Tsun", "label": "VIAJA_A", "title": "Yu Tsun viaja a su cuarto.", "to": "Cuarto de Yu Tsun"}, {"arrows": "to", "from": "Yu Tsun", "label": "VIAJA_A", "title": "Yu Tsun se encuentra en un lugar donde reflexiona sobre su destino.", "to": "lugar de reflexi\u00f3n"}, {"arrows": "to", "from": "Yu Tsun", "label": "VIVE_EN", "title": "Yu Tsun vive en un entorno b\u00e9lico.", "to": "Cielo franc\u00e9s"}, {"arrows": "to", "from": "Yu Tsun", "label": "REVELA", "title": "Yu Tsun revela su desesperado prop\u00f3sito.", "to": "desesperado prop\u00f3sito"}, {"arrows": "to", "from": "Yu Tsun", "label": "RELACIONADO_CON", "title": "Yu Tsun se siente relacionado con el Jefe.", "to": "Jefe"}, {"arrows": "to", "from": "Yu Tsun", "label": "REVELA", "title": "Yu Tsun revela su conexi\u00f3n con el laberinto y su historia familiar.", "to": "historia familiar"}, {"arrows": "to", "from": "Yu Tsun", "label": "VIVE_EN", "title": "Yu Tsun vive en un tiempo donde se cruzan m\u00faltiples realidades.", "to": "el jard\u00edn"}, {"arrows": "to", "from": "Yu Tsun", "label": "PERSIGUE_A", "title": "Yu Tsun es perseguido por el capit\u00e1n.", "to": "capit\u00e1n"}, {"arrows": "to", "from": "Yu Tsun", "label": "REVELA / ESTUDIA", "title": "Yu Tsun revela el contenido de la carta de Ts\u0027ui P\u00ean. / Yu Tsun estudia el manuscrito que le fue enviado.", "to": "El jard\u00edn de los senderos que se bifurcan"}, {"arrows": "to", "from": "Yu Tsun", "label": "POSEE", "title": "Yu Tsun posee una cadena de n\u00edquel.", "to": "cadena de n\u00edquel"}, {"arrows": "to", "from": "Yu Tsun", "label": "VIAJA_A", "title": "Yu Tsun se dirige a la entrada central.", "to": "entrada central"}, {"arrows": "to", "from": "Yu Tsun", "label": "PARTICIPA_EN", "title": "Yu Tsun participa en un conflicto b\u00e9lico.", "to": "Guerra"}, {"arrows": "to", "from": "Yu Tsun", "label": "PARTICIPA_EN", "title": "Yu Tsun participa en un di\u00e1logo con los chicos en el and\u00e9n.", "to": "interacci\u00f3n en el and\u00e9n"}, {"arrows": "to", "from": "Yu Tsun", "label": "REVELA", "title": "Yu Tsun revela el misterio del laberinto de s\u00edmbolos.", "to": "misterio"}, {"arrows": "to", "from": "Yu Tsun", "label": "VIVE_EN", "title": "Yu Tsun vive en un mundo de incertidumbre.", "to": "mundo de incertidumbre"}, {"arrows": "to", "from": "Yu Tsun", "label": "REVELA", "title": "Yu Tsun revela su determinaci\u00f3n irrevocable.", "to": "determinaci\u00f3n irrevocable"}, {"arrows": "to", "from": "Yu Tsun", "label": "VIVE_EN", "title": "Yu Tsun vive en un tiempo donde se cruzan m\u00faltiples realidades.", "to": "la casa"}, {"arrows": "to", "from": "Yu Tsun", "label": "ESTUDIA", "title": "Yu Tsun reflexiona sobre su vida y su destino.", "to": "Reflexi\u00f3n"}, {"arrows": "to", "from": "Yu Tsun", "label": "RELACIONADO_CON", "title": "Yu Tsun se relaciona con un hombre de Inglaterra.", "to": "Goethe"}, {"arrows": "to", "from": "Yu Tsun", "label": "VIAJA_A", "title": "Yu Tsun se dirige a la estaci\u00f3n.", "to": "estaci\u00f3n"}, {"arrows": "to", "from": "Yu Tsun", "label": "VIVE_EN", "title": "Yu Tsun vive en un contexto de soledad y b\u00fasqueda.", "to": "Tientsin"}, {"arrows": "to", "from": "Yu Tsun", "label": "REVELA", "title": "Yu Tsun revela su opini\u00f3n sobre el libro.", "to": "El Jardin de los senderos que se bifurcan"}, {"arrows": "to", "from": "Yu Tsun", "label": "REVELA / DESCIENDE_DE", "title": "Yu Tsun revela su conexi\u00f3n con el jard\u00edn de su antepasado. / Yu Tsun es bisnieto de Ts\u0027ui P\u00ean.", "to": "Ts\u0027ui P\u00ean"}, {"arrows": "to", "from": "Yu Tsun", "label": "REVELA", "title": "Yu Tsun desea revelar el nombre del parque de artiller\u00eda.", "to": "parque de artiller\u00eda brit\u00e1nico sobre el Ancre"}, {"arrows": "to", "from": "Yu Tsun", "label": "VIVE_EN", "title": "Yu Tsun vive en un contexto donde se discuten las obras literarias.", "to": "contexto literario"}, {"arrows": "to", "from": "Yu Tsun", "label": "VIVE_EN", "title": "Yu Tsun vive en un estado de peligro.", "to": "Hochschule de Tsingtao"}, {"arrows": "to", "from": "Yu Tsun", "label": "VIVE_EN", "title": "Yu Tsun vive en un estado de tensi\u00f3n y peligro.", "to": "mundo"}, {"arrows": "to", "from": "Yu Tsun", "label": "VIAJA_A", "title": "Yu Tsun viaja hacia la casa del doctor Stephen Albert.", "to": "la casa del doctor Stephen Albert"}, {"arrows": "to", "from": "Yu Tsun", "label": "VIVE_EN", "title": "Yu Tsun vive en un contexto de guerra y conflicto.", "to": "Inglaterra"}, {"arrows": "to", "from": "Yu Tsun", "label": "POSEE", "title": "Yu Tsun posee una moneda cuadrangular.", "to": "moneda cuadrangular"}, {"arrows": "to", "from": "Yu Tsun", "label": "VIAJA_A", "title": "Yu Tsun viaja a trav\u00e9s de sus recuerdos hacia el jard\u00edn.", "to": "jard\u00edn"}, {"arrows": "to", "from": "Yu Tsun", "label": "VIVE_EN", "title": "Yu Tsun vive en un contexto de guerra.", "to": "Imperio Brit\u00e1nico"}, {"arrows": "to", "from": "Yu Tsun", "label": "REVELA", "title": "Yu Tsun revela su cansancio tras sus acciones.", "to": "cansancio"}, {"arrows": "to", "from": "Yu Tsun", "label": "PERSIGUE_A / RELACIONADO_CON", "title": "Richard Madden es el perseguidor de Yu Tsun. / Yu Tsun est\u00e1 relacionado con el recuerdo de Richard Madden.", "to": "Richard Madden"}, {"arrows": "to", "from": "Yu Tsun", "label": "ESTUDIA", "title": "Yu Tsun escucha y reflexiona sobre las redacciones de su antepasado.", "to": "redacciones"}, {"arrows": "to", "from": "Yu Tsun", "label": "PARTICIPA_EN", "title": "Yu Tsun participa en un juego del azar.", "to": "juego del azar"}, {"arrows": "to", "from": "Yu Tsun", "label": "REVELA", "title": "Yu Tsun revela que posee un secreto importante.", "to": "Secreto"}, {"arrows": "to", "from": "Yu Tsun", "label": "PARTICIPA_EN", "title": "Yu Tsun es condenado a la horca.", "to": "condena a la horca"}, {"arrows": "to", "from": "Yu Tsun", "label": "VIAJA_A", "title": "Yu Tsun planea viajar a Fenton.", "to": "Fenton"}, {"arrows": "to", "from": "Yu Tsun", "label": "PARTICIPA_EN", "title": "Yu Tsun participa en una aventura.", "to": "aventura"}, {"arrows": "to", "from": "Yu Tsun", "label": "VIVE_EN", "title": "Yu Tsun vive en un contexto de reflexi\u00f3n sobre su herencia.", "to": "su mente"}, {"arrows": "to", "from": "Yu Tsun", "label": "REVELA", "title": "Yu Tsun revela su conexi\u00f3n con los laberintos.", "to": "laberintos"}, {"arrows": "to", "from": "Yu Tsun", "label": "PARTICIPA_EN", "title": "Yu Tsun participa en un duelo.", "to": "duelo"}, {"arrows": "to", "from": "Yu Tsun", "label": "VIVE_EN", "title": "Yu Tsun vive en un cuarto con una estrecha cama de hierro.", "to": "Cuarto"}, {"arrows": "to", "from": "Yu Tsun", "label": "VIAJA_A", "title": "Yu Tsun viaja a la aldea de Ashgove.", "to": "Aldea de Ashgove"}, {"arrows": "to", "from": "Yu Tsun", "label": "VIAJA_A", "title": "Yu Tsun viaja mentalmente a su infancia.", "to": "Jard\u00edn de Hai Feng"}, {"arrows": "to", "from": "Yu Tsun", "label": "POSEE", "title": "Yu Tsun posee informaci\u00f3n crucial sobre el parque de artiller\u00eda.", "to": "Informaci\u00f3n"}, {"arrows": "to", "from": "Yu Tsun", "label": "PARTICIPA_EN", "title": "Yu Tsun participa en un di\u00e1logo sobre el tiempo y la realidad.", "to": "di\u00e1logo sobre el tiempo"}, {"arrows": "to", "from": "Yu Tsun", "label": "ESTUDIA", "title": "Yu Tsun estudia la manera en que un libro puede ser infinito.", "to": "infinito"}, {"arrows": "to", "from": "Yu Tsun", "label": "POSEE", "title": "Yu Tsun posee un rev\u00f3lver con una bala.", "to": "rev\u00f3lver"}, {"arrows": "to", "from": "Yu Tsun", "label": "REVELA", "title": "Yu Tsun revela el secreto nombre de la ciudad que debe ser atacada.", "to": "ciudad"}, {"arrows": "to", "from": "Yu Tsun", "label": "ENEMIGO_DE", "title": "En uno de los futuros, Yu Tsun es enemigo de Albert.", "to": "Albert"}, {"arrows": "to", "from": "Yu Tsun", "label": "VIVE_EN", "title": "Yu Tsun vive en un contexto de desesperaci\u00f3n y aventura.", "to": "isla occidental"}, {"arrows": "to", "from": "Yu Tsun", "label": "TRABAJA_PARA", "title": "Yu Tsun trabaja para sobrevivir en un entorno hostil.", "to": "gobierno"}, {"arrows": "to", "from": "Yu Tsun", "label": "VIAJA_A", "title": "Yu Tsun viaja en su mente hacia su posible muerte.", "to": "Muerte"}, {"arrows": "to", "from": "Yu Tsun", "label": "REVELA", "title": "Yu Tsun revela su percepci\u00f3n del tiempo y la realidad.", "to": "realidad"}, {"arrows": "to", "from": "Yu Tsun", "label": "VIVE_EN", "title": "Yu Tsun vive en una casa cercana a la estaci\u00f3n.", "to": "casa"}, {"arrows": "to", "from": "Yu Tsun", "label": "ESTUDIA", "title": "Yu Tsun estudia las ilusorias im\u00e1genes del laberinto.", "to": "ilusorias im\u00e1genes"}, {"arrows": "to", "from": "Yu Tsun", "label": "REVELA", "title": "Yu Tsun revela su contrici\u00f3n y cansancio tras sus acciones.", "to": "contrici\u00f3n"}, {"arrows": "to", "from": "Yu Tsun", "label": "REVELA", "title": "Yu Tsun revela su estado emocional tras el encuentro con Richard Madden.", "to": "felicidad"}, {"arrows": "to", "from": "Yu Tsun", "label": "RELACIONADO_CON", "title": "Yu Tsun se relaciona con las conjeturas sobre la obra de Ts\u0027ui P\u00ean.", "to": "conjeturas"}, {"arrows": "to", "from": "Yu Tsun", "label": "POSEE", "title": "Yu Tsun posee una libreta.", "to": "libreta"}, {"arrows": "to", "from": "Yu Tsun", "label": "VIVE_EN", "title": "Yu Tsun se encuentra en Berl\u00edn.", "to": "Berl\u00edn"}, {"arrows": "to", "from": "Yu Tsun", "label": "AUTOR_DE", "title": "Yu Tsun dict\u00f3 una declaraci\u00f3n sobre un caso.", "to": "Historia de la Guerra Europea"}, {"arrows": "to", "from": "Yu Tsun", "label": "POSEE", "title": "Yu Tsun posee una carta que decide destruir.", "to": "carta"}, {"arrows": "to", "from": "Yu Tsun", "label": "ESTUDIA", "title": "Yu Tsun estudia su situaci\u00f3n y su duelo.", "to": "estrategia"}, {"arrows": "to", "from": "Yu Tsun", "label": "PARTICIPA_EN", "title": "Yu Tsun participa en la guerra a trav\u00e9s de su secreto.", "to": "guerra"}, {"arrows": "to", "from": "Yu Tsun", "label": "VIVE_EN", "title": "Yu Tsun vive en Staffordshire.", "to": "Staffordshire"}, {"arrows": "to", "from": "Yu Tsun", "label": "TRABAJA_PARA", "title": "Yu Tsun trabaja para el bando que busca el secreto.", "to": "Ej\u00e9rcito brit\u00e1nico"}, {"arrows": "to", "from": "Yu Tsun", "label": "POSEE", "title": "Yu Tsun posee un reloj norteamericano.", "to": "reloj norteamericano"}, {"arrows": "to", "from": "Yu Tsun", "label": "VIAJA_A", "title": "Yu Tsun toma un tren hacia una estaci\u00f3n m\u00e1s lejana.", "to": "estaci\u00f3n m\u00e1s lejana"}, {"arrows": "to", "from": "Richard Madden", "label": "PERSIGUE_A / ENEMIGO_DE", "title": "Richard Madden persigue a Yu Tsun. / Richard Madden es enemigo de Yu Tsun.", "to": "Yu Tsun"}, {"arrows": "to", "from": "Richard Madden", "label": "VISITA_A", "title": "Richard Madden avanza por el sendero del jard\u00edn.", "to": "jard\u00edn"}, {"arrows": "to", "from": "Richard Madden", "label": "TRABAJA_PARA", "title": "Richard Madden trabaja para el Imperio Brit\u00e1nico.", "to": "Imperio Brit\u00e1nico"}, {"arrows": "to", "from": "Richard Madden", "label": "PARTICIPA_EN", "title": "Richard Madden participa en un enfrentamiento con Hans Rabener.", "to": "enfrentamiento"}, {"arrows": "to", "from": "Richard Madden", "label": "ENEMIGO_DE / PERSIGUE_A", "title": "Richard Madden es enemigo de Hans Rabener. / Richard Madden es perseguido por el esp\u00eda prusiano.", "to": "Hans Rabener"}, {"arrows": "to", "from": "Stephen Albert", "label": "AUTOR_DE", "title": "Stephen Albert menciona la Enciclopedia Perdida.", "to": "Enciclopedia Perdida"}, {"arrows": "to", "from": "Stephen Albert", "label": "PARTICIPA_EN", "title": "Stephen Albert participa en una discusi\u00f3n sobre la novela y su contenido.", "to": "discusi\u00f3n sobre la novela"}, {"arrows": "to", "from": "Stephen Albert", "label": "RELACIONADO_CON / REVELA", "title": "Stephen Albert menciona a Ts\u0027ui P\u00ean en su conversaci\u00f3n. / Stephen Albert revela su opini\u00f3n sobre el trabajo de Ts\u0027ui P\u00ean.", "to": "Ts\u0027ui P\u00ean"}, {"arrows": "to", "from": "Stephen Albert", "label": "VISITA_A / ASESINA_A", "title": "Stephen Albert visita a Yu Tsun para discutir sobre la obra. / Yu Tsun asesina a Stephen Albert.", "to": "Yu Tsun"}, {"arrows": "to", "from": "Stephen Albert", "label": "TRABAJA_PARA", "title": "Stephen Albert trabaja como sin\u00f3logo.", "to": "sinolog\u00eda"}, {"arrows": "to", "from": "Stephen Albert", "label": "REVELA", "title": "Stephen Albert revela la omisi\u00f3n del tiempo en la obra de Ts\u0027ui P\u00ean.", "to": "omisi\u00f3n del tiempo"}, {"arrows": "to", "from": "Stephen Albert", "label": "REVELA", "title": "Stephen Albert revela la naturaleza enigm\u00e1tica de la obra de Ts\u0027ui P\u00ean.", "to": "enigma"}, {"arrows": "to", "from": "praderas", "label": "UBICADO_EN", "title": "Las praderas son el entorno donde ocurre la reflexi\u00f3n de Yu Tsun.", "to": "camino"}, {"arrows": "to", "from": "pabell\u00f3n", "label": "UBICADO_EN", "title": "El pabell\u00f3n est\u00e1 ubicado en el jard\u00edn.", "to": "jard\u00edn"}, {"arrows": "to", "from": "reflexi\u00f3n", "label": "SIMBOLIZA", "title": "La reflexi\u00f3n simboliza la conexi\u00f3n entre Yu Tsun y su herencia.", "to": "herencia"}, {"arrows": "to", "from": "tarde", "label": "SIMBOLIZA", "title": "La tarde simboliza un momento de reflexi\u00f3n para Yu Tsun.", "to": "infinito"}, {"arrows": "to", "from": "El jard\u00edn de los senderos que se bifurcan", "label": "REVELA", "title": "La obra revela la idea de m\u00faltiples porvenires.", "to": "varios porvenires"}, {"arrows": "to", "from": "El jard\u00edn de los senderos que se bifurcan", "label": "SIMBOLIZA", "title": "La obra simboliza la multiplicidad de desenlaces y bifurcaciones.", "to": "bifurcaciones"}, {"arrows": "to", "from": "El jard\u00edn de los senderos que se bifurcan", "label": "SIMBOLIZA", "title": "El jard\u00edn simboliza los varios porvenires y las bifurcaciones de la vida.", "to": "bifurcaci\u00f3n"}, {"arrows": "to", "from": "El jard\u00edn de los senderos que se bifurcan", "label": "REVELA", "title": "La obra revela las contradicciones inherentes a las decisiones.", "to": "contradicciones"}, {"arrows": "to", "from": "El jard\u00edn de los senderos que se bifurcan", "label": "SIMBOLIZA", "title": "La obra simboliza un laberinto de posibilidades.", "to": "laberinto"}, {"arrows": "to", "from": "El jard\u00edn de los senderos que se bifurcan", "label": "SIMBOLIZA", "title": "La novela simboliza un enigma relacionado con el espacio.", "to": "espacio"}, {"arrows": "to", "from": "El jard\u00edn de los senderos que se bifurcan", "label": "SIMBOLIZA", "title": "El jard\u00edn simboliza las bifurcaciones del tiempo y las decisiones.", "to": "bifurcaciones del tiempo"}, {"arrows": "to", "from": "El jard\u00edn de los senderos que se bifurcan", "label": "SIMBOLIZA", "title": "La novela simboliza la complejidad del tiempo y el espacio.", "to": "met\u00e1foras ineptas"}, {"arrows": "to", "from": "El Jardin de los senderos que se bifurcan", "label": "RELACIONADO_CON", "title": "El cuento est\u00e1 relacionado con la idea de laberintos.", "to": "laberintos"}, {"arrows": "to", "from": "Ts\u0027ui P\u00ean", "label": "POSEE", "title": "Ts\u0027ui P\u00ean posee un Laberinto.", "to": "Laberinto"}, {"arrows": "to", "from": "Ts\u0027ui P\u00ean", "label": "RELACIONADO_CON", "title": "Ts\u0027ui P\u00ean est\u00e1 relacionado con temas metaf\u00edsicos y m\u00edsticos en su obra.", "to": "aficiones metaf\u00edsicas"}, {"arrows": "to", "from": "Ts\u0027ui P\u00ean", "label": "AUTOR_DE / POSEE / RELACIONADO_CON", "title": "Ts\u0027ui P\u00ean es el autor de la novela mencionada. / Ts\u0027ui P\u00ean posee una obra literaria compleja y enigm\u00e1tica. / Ts\u0027ui P\u00ean es relevante en la obra de Borges.", "to": "El jard\u00edn de los senderos que se bifurcan"}, {"arrows": "to", "from": "Ts\u0027ui P\u00ean", "label": "ESTUDIA", "title": "Ts\u0027ui P\u00ean estudia la naturaleza del tiempo y sus posibilidades.", "to": "infinitas series de tiempos"}, {"arrows": "to", "from": "Ts\u0027ui P\u00ean", "label": "AUTOR_DE", "title": "Ts\u0027ui P\u00ean escribi\u00f3 una novela que era m\u00e1s populosa que el Hung Lu Meng.", "to": "Hung Lu Meng"}, {"arrows": "to", "from": "Ts\u0027ui P\u00ean", "label": "AUTOR_DE / POSEE", "title": "Ts\u0027ui P\u00ean es el autor del libro y del laberinto. / Ts\u0027ui P\u00ean edific\u00f3 un laberinto en el que se perdieran todos los hombres.", "to": "laberinto"}, {"arrows": "to", "from": "Ts\u0027ui P\u00ean", "label": "ESTUDIA", "title": "Ts\u0027ui P\u00ean estudia y reflexiona sobre el tiempo en su obra.", "to": "problema del tiempo"}, {"arrows": "to", "from": "Ts\u0027ui P\u00ean", "label": "PARTICIPA_EN", "title": "Ts\u0027ui P\u00ean dedic\u00f3 trece a\u00f1os a la creaci\u00f3n del laberinto.", "to": "creaci\u00f3n del laberinto"}, {"arrows": "to", "from": "Ts\u0027ui P\u00ean", "label": "AUTOR_DE", "title": "Ts\u0027ui P\u00ean es el autor del libro y del laberinto.", "to": "libro"}, {"arrows": "to", "from": "Ts\u0027ui P\u00ean", "label": "POSEE", "title": "Ts\u0027ui P\u00ean posee un jard\u00edn de senderos que se bifurcan.", "to": "jard\u00edn de senderos que se bifurcan"}, {"arrows": "to", "from": "Ts\u0027ui P\u00ean", "label": "VIVE_EN", "title": "Ts\u0027ui P\u00ean se enclaustr\u00f3 en el Pabell\u00f3n de la L\u00edmpida Soledad.", "to": "Pabell\u00f3n de la L\u00edmpida Soledad"}, {"arrows": "to", "from": "Ts\u0027ui P\u00ean", "label": "POSEE", "title": "Ts\u0027ui P\u00ean dej\u00f3 manuscritos ca\u00f3ticos tras su muerte.", "to": "manuscritos ca\u00f3ticos"}, {"arrows": "to", "from": "libro de Ts\u0027ui P\u00ean", "label": "SIMBOLIZA", "title": "El libro simboliza la confusi\u00f3n y el caos en la obra de Ts\u0027ui P\u00ean.", "to": "caos"}, {"arrows": "to", "from": "el campo", "label": "UBICADO_EN", "title": "El campo es el lugar donde se detiene el tren.", "to": "el tren"}, {"arrows": "to", "from": "el jard\u00edn", "label": "UBICADO_EN", "title": "El jard\u00edn est\u00e1 ubicado alrededor de la casa de Yu Tsun.", "to": "la casa"}, {"arrows": "to", "from": "el jard\u00edn", "label": "SIMBOLIZA", "title": "El jard\u00edn simboliza la complejidad de los tiempos y realidades.", "to": "tiempos divergentes"}, {"arrows": "to", "from": "troncos", "label": "REVELA", "title": "Los troncos revelan la forma del farol.", "to": "farol"}, {"arrows": "to", "from": "monje tao\u00edsta o budista", "label": "AUTOR_DE", "title": "El monje fue responsable de la publicaci\u00f3n de los manuscritos de Ts\u0027ui P\u00ean.", "to": "publicaci\u00f3n de manuscritos"}, {"arrows": "to", "from": "m\u00fasica", "label": "RELACIONADO_CON", "title": "La m\u00fasica est\u00e1 relacionada con el vaiv\u00e9n del viento.", "to": "viento"}, {"arrows": "to", "from": "m\u00fasica", "label": "RELACIONADO_CON", "title": "La m\u00fasica est\u00e1 relacionada con la cultura china.", "to": "cultura china"}, {"arrows": "to", "from": "Pabell\u00f3n de la L\u00edmpida Soledad", "label": "UBICADO_EN", "title": "El Pabell\u00f3n de la L\u00edmpida Soledad est\u00e1 en el jard\u00edn.", "to": "jard\u00edn"}, {"arrows": "to", "from": "batalla", "label": "RELACIONADO_CON", "title": "La batalla se relaciona con la vida y la muerte.", "to": "vida y muerte"}, {"arrows": "to", "from": "libro", "label": "RELACIONADO_CON", "title": "El libro y el laberinto son un solo objeto.", "to": "laberinto"}, {"arrows": "to", "from": "laberinto", "label": "REVELA", "title": "El laberinto revela la complejidad de la existencia.", "to": "existencia"}, {"arrows": "to", "from": "Hans Rabener", "label": "ASESINA_A", "title": "Hans Rabener causa la muerte de Richard Madden.", "to": "Richard Madden"}, {"arrows": "to", "from": "Hsi P\u0027\u00eang", "label": "PERSIGUE_A", "title": "Hsi P\u0027\u00eang busca ayudar a Yu Tsun.", "to": "Yu Tsun"}, {"arrows": "to", "from": "redacciones", "label": "SIMBOLIZA", "title": "Las redacciones simbolizan la lucha y el sacrificio.", "to": "sacrificio"}, {"arrows": "to", "from": "Tercer Emperador de la Dinast\u00eda Luminosa", "label": "POSEE", "title": "El Tercer Emperador posee la Enciclopedia Perdida.", "to": "Enciclopedia Perdida"}, {"arrows": "to", "from": "Ashgrove", "label": "UBICADO_EN", "title": "Ashgrove es el nombre de la estaci\u00f3n donde Yu Tsun pregunta a los ni\u00f1os.", "to": "el and\u00e9n"}, {"arrows": "to", "from": "laberinto perdido", "label": "SIMBOLIZA", "title": "El laberinto perdido simboliza la b\u00fasqueda de conocimiento y la complejidad del tiempo.", "to": "conocimiento"}, {"arrows": "to", "from": "alameda", "label": "UBICADO_EN", "title": "La alameda est\u00e1 ubicada entre las rejas del port\u00f3n.", "to": "port\u00f3n"}, {"arrows": "to", "from": "Historia de la Guerra Europea", "label": "REVELA", "title": "Revela detalles sobre una ofensiva de trece divisiones brit\u00e1nicas.", "to": "Ofensiva brit\u00e1nica"}, {"arrows": "to", "from": "Fang", "label": "ASESINA_A", "title": "Fang resuelve matar al intruso.", "to": "intruso"}, {"arrows": "to", "from": "Las 1001 Noches", "label": "REVELA", "title": "Las 1001 Noches revela la historia de la reina Shahrazad.", "to": "Shahrazad"}, {"arrows": "to", "from": "hombre alto", "label": "VISITA_A", "title": "El hombre alto visita el port\u00f3n donde se encuentra Yu Tsun.", "to": "port\u00f3n"}, {"arrows": "to", "from": "familia de Ts\u0027ui P\u00ean", "label": "REVELA", "title": "La familia de Ts\u0027ui P\u00ean quer\u00eda quemar los manuscritos.", "to": "manuscritos ca\u00f3ticos"}, {"arrows": "to", "from": "Viktor Runeberg", "label": "ENEMIGO_DE", "title": "Viktor Runeberg es un enemigo de Richard Madden.", "to": "Richard Madden"}]);
+
+                  nodeColors = {};
+                  allNodes = nodes.get({ returnType: "Object" });
+                  for (nodeId in allNodes) {
+                    nodeColors[nodeId] = allNodes[nodeId].color;
+                  }
+                  allEdges = edges.get({ returnType: "Object" });
+                  // adding nodes and edges to the graph
+                  data = {nodes: nodes, edges: edges};
+
+                  var options = {
+    "configure": {
+        "enabled": false
+    },
+    "edges": {
+        "color": {
+            "inherit": true
+        },
+        "smooth": {
+            "enabled": true,
+            "type": "dynamic"
+        }
+    },
+    "interaction": {
+        "dragNodes": true,
+        "hideEdgesOnDrag": false,
+        "hideNodesOnDrag": false
+    },
+    "physics": {
+        "enabled": true,
+        "stabilization": {
+            "enabled": true,
+            "fit": true,
+            "iterations": 1000,
+            "onlyDynamicEdges": false,
+            "updateInterval": 50
+        }
+    }
+};
+
+                  
+
+
+                  
+
+                  network = new vis.Network(container, data, options);
+
+                  
+
+                  
+
+                  
+
+
+                  
+                      network.on("stabilizationProgress", function(params) {
+                          document.getElementById('loadingBar').removeAttribute("style");
+                          var maxWidth = 496;
+                          var minWidth = 20;
+                          var widthFactor = params.iterations/params.total;
+                          var width = Math.max(minWidth,maxWidth * widthFactor);
+                          document.getElementById('bar').style.width = width + 'px';
+                          document.getElementById('text').innerHTML = Math.round(widthFactor*100) + '%';
+                      });
+                      network.once("stabilizationIterationsDone", function() {
+                          document.getElementById('text').innerHTML = '100%';
+                          document.getElementById('bar').style.width = '496px';
+                          document.getElementById('loadingBar').style.opacity = 0;
+                          // really clean the dom element
+                          setTimeout(function () {document.getElementById('loadingBar').style.display = 'none';}, 500);
+                      });
+                  
+
+                  return network;
+
+              }
+              drawGraph();
+        </script>
+    </body>
+</html>
